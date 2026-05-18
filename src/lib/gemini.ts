@@ -15,7 +15,7 @@ type GenerateStructuredJsonOptions = {
 };
 
 export function getGeminiApiKey(): string {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) throw new Error("GEMINI_API_KEY not configured");
   return apiKey;
 }
@@ -41,6 +41,7 @@ export async function generateStructuredJson<T>({
 
   const res = await fetch(GEMINI_API_URL, {
     method: "POST",
+    signal: AbortSignal.timeout(45_000),
     headers: {
       "Content-Type": "application/json",
       "x-goog-api-key": apiKey,

@@ -1,26 +1,6 @@
 import { Readable } from "node:stream";
 import type { IncomingMessage, ServerResponse } from "node:http";
-
-type ServerEntry = {
-  fetch: (
-    request: Request,
-    env: Record<string, string | undefined>,
-    ctx: { waitUntil?: (promise: Promise<unknown>) => void },
-  ) => Promise<Response> | Response;
-};
-
-let serverPromise: Promise<ServerEntry> | undefined;
-
-async function getServer(): Promise<ServerEntry> {
-  if (!serverPromise) {
-    const serverBundleUrl = new URL("../dist/server/server.js", import.meta.url).href;
-    serverPromise = import(serverBundleUrl).then(
-      (mod) => ((mod as { default?: ServerEntry }).default ?? (mod as unknown as ServerEntry)),
-    );
-  }
-
-  return serverPromise;
-}
+import server from "../src/server";
 
 async function readRequestBody(req: IncomingMessage): Promise<Uint8Array | undefined> {
   if (req.method === "GET" || req.method === "HEAD") return undefined;
@@ -49,12 +29,14 @@ function toWebRequest(req: IncomingMessage, body?: Uint8Array): Request {
     }
   }
 
-  return new Request(url, {
+  const init: RequestInit & { duplex?: "half" } = {
     method: req.method ?? "GET",
     headers,
-    body,
+    body: body ? Buffer.from(body) : undefined,
     duplex: body ? "half" : undefined,
-  });
+  };
+
+  return new Request(url, init);
 }
 
 async function sendWebResponse(webResponse: Response, res: ServerResponse): Promise<void> {
@@ -81,13 +63,25 @@ async function sendWebResponse(webResponse: Response, res: ServerResponse): Prom
     return;
   }
 
-  Readable.fromWeb(webResponse.body as globalThis.ReadableStream<Uint8Array>).pipe(res);
+  await new Promise<void>((resolve, reject) => {
+    Readable.fromWeb(webResponse.body as unknown as Parameters<typeof Readable.fromWeb>[0])
+      .on("error", reject)
+      .pipe(res)
+      .on("finish", resolve)
+      .on("error", reject);
+  });
 }
 
 export default async function handler(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  if (req.url === "/favicon.ico") {
+    res.statusCode = 308;
+    res.setHeader("location", "/logo.svg");
+    res.end();
+    return;
+  }
+
   const body = await readRequestBody(req);
   const request = toWebRequest(req, body);
-  const server = await getServer();
   const response = await server.fetch(request, process.env, {});
   await sendWebResponse(response, res);
 }

@@ -7,6 +7,10 @@
       "handle": "filesystem"
     },
     {
+      "src": "/favicon.ico",
+      "dest": "/favicon.svg"
+    },
+    {
       "src": "/(.*)",
       "dest": "/api/server"
     }
