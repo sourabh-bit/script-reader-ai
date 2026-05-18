@@ -31,6 +31,10 @@ import {
   LayoutGrid,
   CalendarClock,
   ScrollText,
+  Maximize2,
+  FileDown,
+  RefreshCw,
+  Image as ImageIcon,
 } from "lucide-react";
 import { analyzePrescription, type PrescriptionAnalysis, type Medication } from "@/lib/analyze.functions";
 import {
@@ -39,16 +43,17 @@ import {
   type LanguageCode,
   type TranslatedPrescription,
 } from "@/lib/translate.functions";
+import { AppLogo } from "@/components/app-logo";
 
 export const Route = createFileRoute("/")({
   component: Index,
   head: () => ({
     meta: [
-      { title: "RxDecode — AI Prescription Analyzer with Indian Translations" },
+      { title: "RxDecode | Prescription Intelligence Workspace" },
       {
         name: "description",
         content:
-          "Decode handwritten prescriptions in seconds. Extract medicines, doses, timing — translate to Hindi, Tamil, Bengali & more Indian languages. Daily schedule, read aloud, history.",
+          "Analyze handwritten prescriptions, organize medicines, build daily schedules, and translate the output into major Indian languages.",
       },
     ],
   }),
@@ -116,6 +121,7 @@ function Index() {
   const [translating, setTranslating] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [showImageViewer, setShowImageViewer] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<number | null>(null);
@@ -271,6 +277,7 @@ function Index() {
           fileName={fileName}
           onPick={() => inputRef.current?.click()}
           onReset={reset}
+          onViewFull={() => setShowImageViewer(true)}
           onDrop={(f) => {
             setDragOver(false);
             void handleFile(f);
@@ -293,6 +300,7 @@ function Index() {
           loading={loading}
           error={error}
           result={result}
+          preview={preview}
           hasImage={!!preview}
           tab={tab}
           setTab={setTab}
@@ -313,6 +321,10 @@ function Index() {
           onRemove={removeHistory}
         />
       )}
+
+      {showImageViewer && preview && (
+        <ImageViewer image={preview} fileName={fileName} onClose={() => setShowImageViewer(false)} />
+      )}
     </main>
   );
 }
@@ -320,20 +332,21 @@ function Index() {
 function Header({ onOpenHistory, historyCount }: { onOpenHistory: () => void; historyCount: number }) {
   return (
     <header className="relative">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-sm">
-            <Pill className="h-4 w-4" />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <AppLogo className="h-12 w-12 shrink-0 rounded-2xl shadow-sm shadow-primary/20" />
+          <div>
+            <span className="font-display text-xl font-semibold tracking-tight">RxDecode</span>
+            <p className="text-sm text-muted-foreground">Prescription intelligence workspace for analysis, translation, scheduling, and export</p>
           </div>
-          <span className="font-display text-lg font-semibold tracking-tight">RxDecode</span>
         </div>
         <button
           onClick={onOpenHistory}
-          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface/70 px-3 py-1.5 text-xs font-medium backdrop-blur hover:bg-muted"
+          className="inline-flex min-w-[140px] items-center justify-center gap-2 self-start rounded-2xl border border-border bg-surface px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm backdrop-blur transition hover:-translate-y-0.5 hover:bg-muted sm:self-auto"
         >
-          <History className="h-3.5 w-3.5" /> History
+          <History className="h-4 w-4" /> View history
           {historyCount > 0 && (
-            <span className="rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground">
+            <span className="rounded-full bg-primary px-2 py-0.5 text-[11px] font-bold text-primary-foreground">
               {historyCount}
             </span>
           )}
@@ -341,17 +354,16 @@ function Header({ onOpenHistory, historyCount }: { onOpenHistory: () => void; hi
       </div>
 
       <div className="mt-8 text-center">
-        <div className="inline-flex items-center gap-2 rounded-full border border-border bg-surface/70 px-4 py-1.5 text-xs font-medium text-muted-foreground backdrop-blur">
+        <div className="inline-flex items-center gap-2 rounded-full border border-border bg-surface/80 px-4 py-2 text-xs font-medium text-muted-foreground backdrop-blur">
           <Sparkles className="h-3.5 w-3.5 text-primary" />
-          Fast vision AI · 12 Indian languages · Daily schedule
+          Student-built workflow, multilingual output, schedule-ready results
         </div>
         <h1 className="mt-5 text-4xl font-bold leading-tight text-foreground sm:text-6xl">
-          Decode any <span className="italic text-primary">prescription</span>
-          <br className="hidden sm:block" /> in seconds
+          Turn any handwritten <span className="italic text-primary">prescription</span>
+          <br className="hidden sm:block" /> into clear patient guidance
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground sm:text-lg">
-          Upload a photo. Get medicines, doses, timing, daily schedule, and translate it to your
-          mother tongue — instantly.
+          Upload a photo to extract medicines, doses, timing, daily schedules, and multilingual summaries in one workspace.
         </p>
       </div>
     </header>
@@ -366,24 +378,20 @@ function UploadCard(props: {
   fileName: string;
   onPick: () => void;
   onReset: () => void;
+  onViewFull: () => void;
   onDrop: (f: File) => void;
   onDragOver: () => void;
   onDragLeave: () => void;
 }) {
-  const { preview, loading, elapsed, dragOver, fileName, onPick, onReset, onDrop, onDragOver, onDragLeave } = props;
+  const { preview, loading, elapsed, dragOver, fileName, onPick, onReset, onViewFull, onDrop, onDragOver, onDragLeave } = props;
 
   return (
-    <div className="rounded-2xl border border-border bg-surface/80 p-5 shadow-sm backdrop-blur">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Prescription image</h2>
-        {preview && (
-          <button
-            onClick={onReset}
-            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
-          >
-            <X className="h-3.5 w-3.5" /> Clear
-          </button>
-        )}
+    <div className="rounded-[1.75rem] border border-border bg-surface/85 p-4 shadow-sm backdrop-blur sm:p-5">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">Prescription image</h2>
+          <p className="text-sm text-muted-foreground">Use a full-page, front-facing photo for the best extraction.</p>
+        </div>
       </div>
 
       {!preview ? (
@@ -399,7 +407,7 @@ function UploadCard(props: {
             const f = e.dataTransfer.files?.[0];
             if (f) onDrop(f);
           }}
-          className={`flex w-full flex-col items-center justify-center rounded-xl border-2 border-dashed p-12 text-center transition ${
+          className={`flex min-h-[380px] w-full flex-col items-center justify-center rounded-[1.5rem] border-2 border-dashed px-6 py-12 text-center transition sm:px-10 ${
             dragOver
               ? "border-primary bg-primary/5"
               : "border-border bg-muted/30 hover:bg-muted/50"
@@ -410,30 +418,44 @@ function UploadCard(props: {
           </div>
           <p className="mt-4 font-medium text-foreground">Drop your prescription here</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            or click to browse — JPG, PNG, WebP up to 15MB
+            or click to browse - JPG, PNG, WebP up to 15MB
           </p>
           <p className="mt-3 text-[11px] text-muted-foreground">
             Image is auto-compressed for faster analysis
           </p>
         </button>
       ) : (
-        <div className="relative overflow-hidden rounded-xl border border-border bg-muted">
-          <img src={preview} alt={fileName} className="max-h-[520px] w-full object-contain" />
+        <div className="relative overflow-hidden rounded-[1.5rem] border border-border bg-muted">
+          <img src={preview} alt={fileName} className="max-h-[560px] w-full bg-white/40 object-contain" />
+          <div className="absolute inset-x-0 bottom-0 flex flex-wrap items-center justify-between gap-2 bg-gradient-to-t from-background/90 via-background/45 to-transparent p-3">
+            <div className="flex min-w-0 items-center gap-2 text-sm text-foreground">
+              <ImageIcon className="h-4 w-4 shrink-0 text-primary" />
+              <span className="truncate font-medium">{fileName}</span>
+            </div>
+          </div>
           {loading && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background/85 backdrop-blur-sm">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-sm font-medium">Reading prescription… {elapsed.toFixed(1)}s</p>
+              <p className="text-sm font-medium">Reading prescription... {elapsed.toFixed(1)}s</p>
               <p className="text-xs text-muted-foreground">Decoding handwriting & matching medicines</p>
             </div>
           )}
         </div>
       )}
 
-      <div className="mt-4 grid grid-cols-3 gap-3 text-center text-xs text-muted-foreground">
-        <Tip icon={<FileText className="h-4 w-4" />} label="Clear photo" />
-        <Tip icon={<Sparkles className="h-4 w-4" />} label="Good lighting" />
-        <Tip icon={<Pill className="h-4 w-4" />} label="Full page" />
-      </div>
+      {preview ? (
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <ActionTile icon={<Maximize2 className="h-4 w-4" />} label="View full page" onClick={onViewFull} />
+          <ActionTile icon={<RefreshCw className="h-4 w-4" />} label="Replace photo" onClick={onPick} />
+          <ActionTile icon={<X className="h-4 w-4" />} label="Clear photo" onClick={onReset} />
+        </div>
+      ) : (
+        <div className="mt-4 grid grid-cols-1 gap-3 text-center text-xs text-muted-foreground sm:grid-cols-3">
+          <Tip icon={<Search className="h-4 w-4" />} label="Front facing" />
+          <Tip icon={<Sparkles className="h-4 w-4" />} label="Good lighting" />
+          <Tip icon={<Pill className="h-4 w-4" />} label="Full page" />
+        </div>
+      )}
     </div>
   );
 }
@@ -447,10 +469,23 @@ function Tip({ icon, label }: { icon: React.ReactNode; label: string }) {
   );
 }
 
+function ActionTile({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center justify-center gap-2 rounded-2xl border border-border bg-muted/40 px-4 py-3 text-sm font-medium text-foreground transition hover:-translate-y-0.5 hover:bg-surface"
+    >
+      <span className="text-primary">{icon}</span>
+      <span>{label}</span>
+    </button>
+  );
+}
+
 function ResultsPanel({
   loading,
   error,
   result,
+  preview,
   hasImage,
   tab,
   setTab,
@@ -462,6 +497,7 @@ function ResultsPanel({
   loading: boolean;
   error: string | null;
   result: PrescriptionAnalysis | null;
+  preview: string | null;
   hasImage: boolean;
   tab: "overview" | "schedule" | "translate" | "raw";
   setTab: (t: "overview" | "schedule" | "translate" | "raw") => void;
@@ -502,7 +538,7 @@ function ResultsPanel({
 
   return (
     <Panel>
-      <ResultsHeader data={result} />
+      <ResultsHeader data={result} preview={preview} />
       <Tabs tab={tab} setTab={setTab} />
       <div className="mt-5">
         {tab === "overview" && <OverviewTab data={result} />}
@@ -524,7 +560,7 @@ function ResultsPanel({
 
 function Panel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-border bg-surface/80 p-5 shadow-sm backdrop-blur">
+    <div className="rounded-[1.75rem] border border-border bg-surface/85 p-4 shadow-sm backdrop-blur sm:p-5">
       {children}
     </div>
   );
@@ -572,7 +608,7 @@ function SkeletonResults() {
   );
 }
 
-function ResultsHeader({ data }: { data: PrescriptionAnalysis }) {
+function ResultsHeader({ data, preview }: { data: PrescriptionAnalysis; preview: string | null }) {
   const [copied, setCopied] = useState(false);
 
   const copyAll = async () => {
@@ -592,22 +628,26 @@ function ResultsHeader({ data }: { data: PrescriptionAnalysis }) {
     URL.revokeObjectURL(url);
   };
 
-  const print = () => window.print();
+  const downloadPdf = () => downloadPrescriptionPdf(data);
+  const print = () => printPrescriptionReport(data, preview);
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div className="flex items-center gap-3">
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-3">
         <h2 className="text-xl font-semibold">Extracted prescription</h2>
         <ConfidenceBadge level={data.overall_confidence} />
       </div>
-      <div className="flex items-center gap-1">
-        <IconBtn onClick={copyAll} title="Copy as text">
+      <div className="flex flex-nowrap items-center gap-2 overflow-x-auto pb-1">
+        <IconBtn onClick={copyAll} title="Copy as text" label={copied ? "Copied" : "Copy text"}>
           {copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
         </IconBtn>
-        <IconBtn onClick={downloadJson} title="Download JSON">
+        <IconBtn onClick={downloadPdf} title="Download PDF report" label="Export PDF" priority="primary">
+          <FileDown className="h-3.5 w-3.5" />
+        </IconBtn>
+        <IconBtn onClick={downloadJson} title="Download JSON" label="JSON">
           <Download className="h-3.5 w-3.5" />
         </IconBtn>
-        <IconBtn onClick={print} title="Print">
+        <IconBtn onClick={print} title="Print" label="Print">
           <Printer className="h-3.5 w-3.5" />
         </IconBtn>
       </div>
@@ -618,19 +658,28 @@ function ResultsHeader({ data }: { data: PrescriptionAnalysis }) {
 function IconBtn({
   onClick,
   title,
+  label,
+  priority = "default",
   children,
 }: {
   onClick: () => void;
   title: string;
+  label?: string;
+  priority?: "default" | "primary";
   children: React.ReactNode;
 }) {
   return (
     <button
       onClick={onClick}
       title={title}
-      className="rounded-md border border-border bg-surface p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+      className={`inline-flex shrink-0 whitespace-nowrap items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition ${
+        priority === "primary"
+          ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
+          : "border-border bg-surface text-muted-foreground hover:bg-muted hover:text-foreground"
+      }`}
     >
       {children}
+      {label && <span>{label}</span>}
     </button>
   );
 }
@@ -649,7 +698,7 @@ function Tabs({
     { id: "raw", label: "Raw text", icon: <ScrollText className="h-3.5 w-3.5" /> },
   ];
   return (
-    <div className="mt-4 flex gap-1 rounded-lg border border-border bg-muted/40 p-1">
+    <div className="mt-4 flex gap-1 overflow-x-auto rounded-xl border border-border bg-muted/40 p-1">
       {items.map((it) => (
         <button
           key={it.id}
@@ -680,7 +729,7 @@ function OverviewTab({ data }: { data: PrescriptionAnalysis }) {
             <Field
               icon={<User className="h-3.5 w-3.5" />}
               label="Age / Sex"
-              value={[data.patient_age, data.patient_gender].filter(Boolean).join(" • ")}
+              value={[data.patient_age, data.patient_gender].filter(Boolean).join(" / ")}
             />
           )}
           {data.doctor_name && (
@@ -813,7 +862,7 @@ function inferSlots(med: Medication): { slots: Slot[]; withFood?: "before" | "af
   const slots = new Set<Slot>();
 
   // Pattern 1-0-1, 1-1-1, etc.
-  const pat = s.match(/(\d)\s*[-–]\s*(\d)\s*[-–]\s*(\d)/);
+  const pat = s.match(/(\\d)\\s*[-??]\\s*(\\d)\\s*[-??]\\s*(\\d)/);
   if (pat) {
     if (Number(pat[1]) > 0) slots.add("morning");
     if (Number(pat[2]) > 0) slots.add("afternoon");
@@ -918,8 +967,8 @@ function ScheduleTab({ data }: { data: PrescriptionAnalysis }) {
                       </div>
                       <div className="mt-1 pl-7 text-muted-foreground">
                         {it.med.dosage ?? "1 dose"}
-                        {it.withFood === "before" && " · before food"}
-                        {it.withFood === "after" && " · after food"}
+                        {it.withFood === "before" && " - before food"}
+                        {it.withFood === "after" && " - after food"}
                       </div>
                     </li>
                   ))}
@@ -949,40 +998,57 @@ function TranslateTab({
   translating: boolean;
 }) {
   const [speaking, setSpeaking] = useState(false);
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [speechHint, setSpeechHint] = useState<string | null>(null);
 
   useEffect(() => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+
+    const syncVoices = () => setAvailableVoices(window.speechSynthesis.getVoices());
+    syncVoices();
+    window.speechSynthesis.onvoiceschanged = syncVoices;
+
     return () => {
-      if (typeof window !== "undefined") window.speechSynthesis?.cancel();
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.onvoiceschanged = null;
     };
   }, []);
 
   const speak = () => {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    const text =
-      language === "en"
-        ? formatAsText(data)
-        : translation
-          ? `${translation.summary}\n\n${translation.medications
-              .map((m) => `${m.name}. ${m.dosage ?? ""} ${m.frequency ?? ""} ${m.timing ?? ""} ${m.duration ?? ""}`)
-              .join(". ")}`
-          : "";
+    const text = buildSpeechText(data, translation, language);
     if (!text) return;
 
-    const u = new SpeechSynthesisUtterance(text);
-    const langMap: Record<LanguageCode, string> = {
-      en: "en-IN", hi: "hi-IN", bn: "bn-IN", ta: "ta-IN", te: "te-IN",
-      mr: "mr-IN", gu: "gu-IN", kn: "kn-IN", ml: "ml-IN", pa: "pa-IN",
-      ur: "ur-IN", or: "or-IN",
-    };
-    u.lang = langMap[language];
-    const voices = window.speechSynthesis.getVoices();
-    const match = voices.find((v) => v.lang.startsWith(u.lang.split("-")[0]));
-    if (match) u.voice = match;
-    u.onend = () => setSpeaking(false);
-    u.onerror = () => setSpeaking(false);
+    const speechConfig = getSpeechConfig(language, availableVoices);
+    const chunks = chunkSpeechText(text);
+    window.speechSynthesis.cancel();
+    setSpeechHint(speechConfig.notice);
     setSpeaking(true);
-    window.speechSynthesis.speak(u);
+
+    let index = 0;
+    const speakNext = () => {
+      if (index >= chunks.length) {
+        setSpeaking(false);
+        return;
+      }
+
+      const utterance = new SpeechSynthesisUtterance(chunks[index]);
+      utterance.lang = speechConfig.lang;
+      if (speechConfig.voice) utterance.voice = speechConfig.voice;
+      utterance.rate = 0.95;
+      utterance.pitch = 1;
+      utterance.onend = () => {
+        index += 1;
+        speakNext();
+      };
+      utterance.onerror = () => {
+        setSpeaking(false);
+        setSpeechHint("Your browser could not read this language aloud. Try installing a matching voice in your OS settings.");
+      };
+      window.speechSynthesis.speak(utterance);
+    };
+
+    speakNext();
   };
 
   const stop = () => {
@@ -994,43 +1060,48 @@ function TranslateTab({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Languages className="h-4 w-4 text-primary" />
-        <span className="text-sm font-medium">Translate to:</span>
+      <div className="rounded-2xl border border-border bg-muted/30 p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="flex items-center gap-2">
+            <Languages className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium">Translate to:</span>
+          </div>
         <select
           value={language}
           onChange={(e) => setLanguage(e.target.value as LanguageCode)}
-          className="ml-1 rounded-md border border-border bg-surface px-2 py-1.5 text-sm"
+          className="min-w-0 rounded-xl border border-border bg-surface px-3 py-2 text-sm sm:min-w-[240px]"
         >
           {SUPPORTED_LANGUAGES.map((l) => (
             <option key={l.code} value={l.code}>
-              {l.label} — {l.native}
+              {l.label} - {l.native}
             </option>
           ))}
         </select>
-        <div className="ml-auto flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-2 lg:ml-auto">
           {!speaking ? (
             <button
               onClick={speak}
-              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs font-medium hover:bg-muted"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-2 text-sm font-medium hover:bg-muted"
             >
               <Volume2 className="h-3.5 w-3.5" /> Read aloud
             </button>
           ) : (
             <button
               onClick={stop}
-              className="inline-flex items-center gap-1.5 rounded-md border border-destructive/40 bg-destructive/10 px-2.5 py-1.5 text-xs font-medium text-destructive"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive"
             >
               <Square className="h-3.5 w-3.5" /> Stop
             </button>
           )}
+        </div>
+          {speechHint && <p className="mt-3 text-xs text-muted-foreground">{speechHint}</p>}
         </div>
       </div>
 
       {translating && (
         <div className="flex items-center gap-2 rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin text-primary" />
-          Translating to {SUPPORTED_LANGUAGES.find((l) => l.code === language)?.native}…
+          Translating to {SUPPORTED_LANGUAGES.find((l) => l.code === language)?.native}...
         </div>
       )}
 
@@ -1059,10 +1130,10 @@ function TranslateTab({
                     </div>
                   </div>
                   <div className="mt-2 grid grid-cols-1 gap-1 text-sm sm:grid-cols-2">
-                    {m.dosage && <KV label="•" value={m.dosage} />}
-                    {m.frequency && <KV label="•" value={m.frequency} />}
-                    {m.timing && <KV label="•" value={m.timing} />}
-                    {m.duration && <KV label="•" value={m.duration} />}
+                    {m.dosage && <KV label="-" value={m.dosage} />}
+                    {m.frequency && <KV label="-" value={m.frequency} />}
+                    {m.timing && <KV label="-" value={m.timing} />}
+                    {m.duration && <KV label="-" value={m.duration} />}
                   </div>
                   {m.instructions && (
                     <p className="mt-2 rounded-md bg-accent/10 px-3 py-1.5 text-xs">{m.instructions}</p>
@@ -1192,7 +1263,7 @@ function HistoryDrawer({
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       <button className="absolute inset-0 bg-background/60 backdrop-blur-sm" onClick={onClose} aria-label="Close" />
-      <aside className="relative flex h-full w-full max-w-md flex-col border-l border-border bg-surface shadow-xl">
+      <aside className="relative flex h-full w-full max-w-lg flex-col border-l border-border bg-surface shadow-xl">
         <div className="flex items-center justify-between border-b border-border p-4">
           <div className="flex items-center gap-2">
             <History className="h-4 w-4 text-primary" />
@@ -1229,7 +1300,7 @@ function HistoryDrawer({
                           .slice(0, 3)
                           .map((m) => m.name)
                           .join(", ")}
-                        {it.data.medications.length > 3 ? "…" : ""}
+                        {it.data.medications.length > 3 ? "..." : ""}
                       </div>
                       <div className="mt-1 text-[10px] text-muted-foreground">
                         {new Date(it.savedAt).toLocaleString()}
@@ -1238,7 +1309,7 @@ function HistoryDrawer({
                   </button>
                   <button
                     onClick={() => onRemove(it.id)}
-                    className="self-start rounded-md p-1.5 text-muted-foreground opacity-0 transition hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
+                    className="self-start rounded-md p-1.5 text-muted-foreground opacity-100 transition hover:bg-destructive/10 hover:text-destructive sm:opacity-0 sm:group-hover:opacity-100"
                     title="Delete"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -1253,7 +1324,380 @@ function HistoryDrawer({
   );
 }
 
+function ImageViewer({ image, fileName, onClose }: { image: string; fileName: string; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/88 p-4 backdrop-blur-sm">
+      <button className="absolute inset-0" onClick={onClose} aria-label="Close full page preview" />
+      <div className="relative z-10 flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] border border-border bg-surface shadow-2xl">
+        <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+          <div className="min-w-0">
+            <div className="text-sm font-semibold text-foreground">Full page preview</div>
+            <div className="truncate text-xs text-muted-foreground">{fileName}</div>
+          </div>
+          <button
+            onClick={onClose}
+            className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+          >
+            <X className="h-4 w-4" /> Close
+          </button>
+        </div>
+        <div className="overflow-auto bg-muted/40 p-3 sm:p-6">
+          <img src={image} alt={fileName} className="mx-auto max-h-[78vh] w-auto rounded-2xl bg-white shadow-sm" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ---------- helpers ----------
+
+function buildSpeechText(
+  data: PrescriptionAnalysis,
+  translation: TranslatedPrescription | null,
+  language: LanguageCode,
+) {
+  if (language === "en") return formatAsText(data);
+  if (!translation) return "";
+
+  const sections = [
+    translation.summary,
+    translation.diagnosis ? `Diagnosis. ${translation.diagnosis}` : "",
+    translation.medications
+      .map((m, index) =>
+        [
+          `${index + 1}. ${m.name}.`,
+          m.dosage,
+          m.frequency,
+          m.timing,
+          m.duration,
+          m.instructions,
+        ]
+          .filter(Boolean)
+          .join(". "),
+      )
+      .join(". "),
+    translation.advice ? `Advice. ${translation.advice}` : "",
+    translation.follow_up ? `Follow up. ${translation.follow_up}` : "",
+  ]
+    .filter(Boolean)
+    .join(". ");
+
+  return sections;
+}
+
+function getSpeechConfig(language: LanguageCode, voices: SpeechSynthesisVoice[]) {
+  const langMap: Record<LanguageCode, string> = {
+    en: "en-IN",
+    hi: "hi-IN",
+    bn: "bn-IN",
+    ta: "ta-IN",
+    te: "te-IN",
+    mr: "mr-IN",
+    gu: "gu-IN",
+    kn: "kn-IN",
+    ml: "ml-IN",
+    pa: "pa-IN",
+    ur: "ur-IN",
+    or: "or-IN",
+  };
+
+  const lang = langMap[language];
+  const shortLang = lang.split("-")[0];
+  const exact = voices.find((voice) => voice.lang.toLowerCase() === lang.toLowerCase());
+  const partial = voices.find((voice) => voice.lang.toLowerCase().startsWith(shortLang.toLowerCase()));
+  const voice = exact ?? partial;
+
+  return {
+    lang,
+    voice,
+    notice:
+      language !== "en" && !voice
+        ? "No matching regional voice was found on this device, so pronunciation may fall back to a default system voice."
+        : null,
+  };
+}
+
+function chunkSpeechText(text: string, maxChunkLength = 220): string[] {
+  const compact = text.replace(/\s+/g, " ").trim();
+  if (!compact) return [];
+
+  const sentences = compact.split(/(?<=[.!?])\s+/);
+  const chunks: string[] = [];
+  let current = "";
+
+  for (const sentence of sentences) {
+    if (!sentence) continue;
+    const candidate = current ? `${current} ${sentence}` : sentence;
+    if (candidate.length <= maxChunkLength) {
+      current = candidate;
+      continue;
+    }
+    if (current) chunks.push(current);
+    if (sentence.length <= maxChunkLength) {
+      current = sentence;
+      continue;
+    }
+
+    const words = sentence.split(" ");
+    let longChunk = "";
+    for (const word of words) {
+      const longCandidate = longChunk ? `${longChunk} ${word}` : word;
+      if (longCandidate.length <= maxChunkLength) {
+        longChunk = longCandidate;
+      } else {
+        if (longChunk) chunks.push(longChunk);
+        longChunk = word;
+      }
+    }
+    current = longChunk;
+  }
+
+  if (current) chunks.push(current);
+  return chunks;
+}
+
+function buildReportSections(data: PrescriptionAnalysis) {
+  const patientLine = [data.patient_name, [data.patient_age, data.patient_gender].filter(Boolean).join(" / ")]
+    .filter(Boolean)
+    .join(" - ");
+
+  const overview = [
+    patientLine ? `Patient: ${patientLine}` : null,
+    data.doctor_name ? `Doctor: ${data.doctor_name}` : null,
+    data.clinic_name ? `Clinic: ${data.clinic_name}` : null,
+    data.date ? `Date: ${data.date}` : null,
+    data.diagnosis ? `Diagnosis: ${data.diagnosis}` : null,
+  ].filter(Boolean) as string[];
+
+  const medications = data.medications.map((med, index) => {
+    const parts = [
+      `${index + 1}. ${med.name}${med.strength ? ` ${med.strength}` : ""}`,
+      med.form,
+      med.dosage,
+      med.frequency,
+      med.timing,
+      med.duration,
+      med.route,
+    ].filter(Boolean);
+
+    return `${parts.join(" - ")}${med.instructions ? ` | Note: ${med.instructions}` : ""}`;
+  });
+
+  const schedule: string[] = [];
+  const slots: Slot[] = ["morning", "afternoon", "evening", "night"];
+  for (const slot of slots) {
+    const entries = data.medications.flatMap((med, index) => {
+      const inferred = inferSlots(med);
+      if (!inferred.slots.includes(slot)) return [];
+      const food =
+        inferred.withFood === "before" ? " before food" : inferred.withFood === "after" ? " after food" : "";
+      return [`${SLOT_META[slot].label} (~${SLOT_META[slot].time}): ${index + 1}. ${med.name}${med.strength ? ` ${med.strength}` : ""} - ${med.dosage ?? "1 dose"}${food}`];
+    });
+    schedule.push(...entries);
+  }
+
+  if (!schedule.length) {
+    schedule.push("No schedule could be inferred from this prescription.");
+  }
+
+  return {
+    overview,
+    medications,
+    schedule,
+    advice: data.advice,
+    followUp: data.follow_up,
+    warnings: data.warnings ?? [],
+  };
+}
+
+function downloadPrescriptionPdf(data: PrescriptionAnalysis) {
+  const sections = buildReportSections(data);
+  const lines = [
+    "RxDecode Prescription Report",
+    "Patient-friendly summary",
+    "",
+    "================ OVERVIEW ================",
+    ...sections.overview,
+    "",
+    "=============== MEDICATIONS ===============",
+    ...sections.medications,
+    "",
+    "============== DAILY SCHEDULE =============",
+    ...sections.schedule,
+    ...(sections.advice ? ["", `Advice: ${sections.advice}`] : []),
+    ...(sections.followUp ? [`Follow-up: ${sections.followUp}`] : []),
+    ...(sections.warnings.length ? ["", "Warnings", ...sections.warnings.map((warning) => `- ${warning}`)] : []),
+  ];
+
+  const pdf = buildSimplePdf(lines);
+  const pdfBytes = new Uint8Array(Array.from(pdf));
+  const blob = new Blob([pdfBytes], { type: "application/pdf" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `prescription-report-${Date.now()}.pdf`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function printPrescriptionReport(data: PrescriptionAnalysis, preview: string | null) {
+  const sections = buildReportSections(data);
+  const popup = window.open("", "_blank", "width=980,height=760");
+  if (!popup) return;
+
+  popup.document.write(`<!doctype html>
+<html>
+  <head>
+    <title>RxDecode Prescription Report</title>
+    <style>
+      body { font-family: Arial, sans-serif; color: #18363a; margin: 24px; line-height: 1.55; background: #f5fbfa; }
+      h1, h2 { margin: 0 0 12px; }
+      h1 { font-size: 26px; }
+      h2 { font-size: 18px; margin-top: 0; }
+      .hero { display: grid; gap: 20px; grid-template-columns: ${preview ? "280px 1fr" : "1fr"}; align-items: start; margin-bottom: 20px; }
+      .eyebrow { display: inline-block; margin-bottom: 10px; padding: 6px 10px; border-radius: 999px; background: #dff1ef; color: #0f6b69; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+      .card { border: 1px solid #d6e3e4; border-radius: 18px; padding: 18px; background: #ffffff; margin-bottom: 18px; page-break-inside: avoid; break-inside: avoid; }
+      .list { margin: 0; padding-left: 18px; }
+      li { margin-bottom: 8px; }
+      img { max-width: 100%; border-radius: 14px; }
+      .header { margin-bottom: 18px; }
+      .summary { color: #45686a; font-size: 14px; }
+      @media print { body { margin: 16px; background: #ffffff; } }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div class="eyebrow">RxDecode report</div>
+      <h1>Prescription Summary</h1>
+      <p class="summary">Overview, medicines, and schedule in a clean patient-friendly layout.</p>
+    </div>
+    <div class="hero">
+      ${preview ? `<div class="card"><img src="${preview}" alt="Prescription preview" /></div>` : ""}
+      <div class="card">
+        <h2>Overview</h2>
+        <ul class="list">${sections.overview.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Medications</h2>
+      <ul class="list">${sections.medications.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>
+    </div>
+    <div class="card">
+      <h2>Daily Schedule</h2>
+      <ul class="list">${sections.schedule.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>
+    </div>
+    ${sections.advice ? `<div class="card"><h2>Advice</h2><p>${escapeHtml(sections.advice)}</p></div>` : ""}
+    ${sections.followUp ? `<div class="card"><h2>Follow-up</h2><p>${escapeHtml(sections.followUp)}</p></div>` : ""}
+    ${sections.warnings.length ? `<div class="card"><h2>Warnings</h2><ul class="list">${sections.warnings.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul></div>` : ""}
+  </body>
+</html>`);
+  popup.document.close();
+  popup.focus();
+  popup.print();
+}
+
+function buildSimplePdf(lines: string[]): Uint8Array {
+  const pageWidth = 595;
+  const pageHeight = 842;
+  const marginLeft = 44;
+  const marginTop = 56;
+  const lineHeight = 16;
+  const maxCharsPerLine = 66;
+  const wrappedLines = lines.flatMap((line) => wrapPdfLine(line, maxCharsPerLine));
+  const linesPerPage = 40;
+  const pages = chunkArray(wrappedLines, linesPerPage);
+
+  const objects: string[] = [];
+  objects.push("<< /Type /Catalog /Pages 2 0 R >>");
+  objects[1] = "";
+
+  const pageEntries: string[] = [];
+  const fontObjectNumber = 3;
+  objects[fontObjectNumber - 1] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>";
+  let nextObjectNumber = 4;
+
+  for (const pageLines of pages) {
+    const pageObjectNumber = nextObjectNumber++;
+    const contentObjectNumber = nextObjectNumber++;
+    pageEntries.push(`${pageObjectNumber} 0 R`);
+
+    const streamLines = [
+      "BT",
+      "/F1 11 Tf",
+      `${marginLeft} ${pageHeight - marginTop} Td`,
+      `${lineHeight} TL`,
+      ...pageLines.map((line, index) => `${index === 0 ? "" : "T* " }(${escapePdfText(line)}) Tj`.trim()),
+      "ET",
+    ];
+    const stream = streamLines.join("\n");
+
+    objects[pageObjectNumber - 1] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 ${fontObjectNumber} 0 R >> >> /Contents ${contentObjectNumber} 0 R >>`;
+    objects[contentObjectNumber - 1] = `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`;
+  }
+
+  objects[1] = `<< /Type /Pages /Count ${pageEntries.length} /Kids [${pageEntries.join(" ")}] >>`;
+
+  let pdf = "%PDF-1.4\n";
+  const offsets = [0];
+  for (let i = 0; i < objects.length; i += 1) {
+    offsets.push(pdf.length);
+    pdf += `${i + 1} 0 obj\n${objects[i]}\nendobj\n`;
+  }
+
+  const xrefOffset = pdf.length;
+  pdf += `xref\n0 ${objects.length + 1}\n`;
+  pdf += "0000000000 65535 f \n";
+  for (let i = 1; i < offsets.length; i += 1) {
+    pdf += `${offsets[i].toString().padStart(10, "0")} 00000 n \n`;
+  }
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+
+  return new TextEncoder().encode(pdf);
+}
+
+function wrapPdfLine(text: string, maxChars: number) {
+  if (!text) return [""];
+  const words = text.replace(/\s+/g, " ").trim().split(" ");
+  const lines: string[] = [];
+  let current = "";
+
+  for (const word of words) {
+    const candidate = current ? `${current} ${word}` : word;
+    if (candidate.length <= maxChars) {
+      current = candidate;
+    } else {
+      if (current) lines.push(current);
+      current = word;
+    }
+  }
+
+  if (current) lines.push(current);
+  return lines;
+}
+
+function escapePdfText(text: string) {
+  return text
+    .replace(/\\/g, "\\\\")
+    .replace(/\(/g, "\\(")
+    .replace(/\)/g, "\\)")
+    .replace(/[^\x20-\x7E]/g, "?");
+}
+
+function chunkArray<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+}
+
+function escapeHtml(text: string) {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;");
+}
 
 function formatAsText(data: PrescriptionAnalysis): string {
   const lines: string[] = [];
@@ -1272,7 +1716,7 @@ function formatAsText(data: PrescriptionAnalysis): string {
       m.duration,
     ]
       .filter(Boolean)
-      .join(" — ");
+      .join(" - ");
     lines.push(parts);
     if (m.instructions) lines.push(`   Note: ${m.instructions}`);
   });

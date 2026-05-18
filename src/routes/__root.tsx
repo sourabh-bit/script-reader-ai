@@ -72,16 +72,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "RxDecode | Prescription Intelligence Workspace" },
+      { name: "description", content: "Student-built prescription analysis workspace with multilingual assistance and export tools." },
+      { name: "author", content: "RxDecode Project Team" },
+      { property: "og:title", content: "RxDecode | Prescription Intelligence Workspace" },
+      { property: "og:description", content: "Student-built prescription analysis workspace with multilingual assistance and export tools." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
+      {
+        rel: "icon",
+        type: "image/svg+xml",
+        href: "/logo.svg",
+      },
       {
         rel: "stylesheet",
         href: appCss,
