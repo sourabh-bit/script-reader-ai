@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { translatePrescriptionServer } from "../src/lib/translate.server";
-import type { LanguageCode, PrescriptionAnalysis } from "../src/lib/prescription-types";
-import { normalizeError, readJsonBody, sendJson, sendMethodNotAllowed } from "./_shared";
+import { translatePrescriptionServer } from "../src/lib/translate.server.js";
+import type { LanguageCode, PrescriptionAnalysis } from "../src/lib/prescription-types.js";
+import { normalizeError, readJsonBody, sendJson, sendMethodNotAllowed } from "./_shared.js";
 
 export default async function handler(req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (req.method !== "POST") {

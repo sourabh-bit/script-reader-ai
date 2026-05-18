@@ -1,10 +1,10 @@
-import { generateStructuredJson } from "./gemini";
+import { generateStructuredJson } from "./gemini.js";
 import type {
   LanguageCode,
   PrescriptionAnalysis,
   TranslatedPrescription,
-} from "./prescription-types";
-import { SUPPORTED_LANGUAGES } from "./prescription-types";
+} from "./prescription-types.js";
+import { SUPPORTED_LANGUAGES } from "./prescription-types.js";
 
 const TRANSLATION_SCHEMA = {
   type: "object",

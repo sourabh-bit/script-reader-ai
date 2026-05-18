@@ -1,5 +1,5 @@
-import { generateStructuredJson } from "./gemini";
-import type { PrescriptionAnalysis } from "./prescription-types";
+import { generateStructuredJson } from "./gemini.js";
+import type { PrescriptionAnalysis } from "./prescription-types.js";
 
 const SYSTEM_PROMPT = `You are an expert medical prescription analyzer with deep knowledge of pharmacology, common drug names (brand and generic), abbreviations, and handwriting patterns of physicians worldwide.
 

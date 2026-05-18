@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { analyzePrescriptionServer } from "../src/lib/analyze.server";
-import { normalizeError, readJsonBody, sendJson, sendMethodNotAllowed } from "./_shared";
+import { analyzePrescriptionServer } from "../src/lib/analyze.server.js";
+import { normalizeError, readJsonBody, sendJson, sendMethodNotAllowed } from "./_shared.js";
 
 export default async function handler(req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (req.method !== "POST") {
