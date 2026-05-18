@@ -1,19 +1,10 @@
 {
-  "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "dist/client",
-  "functions": {
-    "api/ssr.ts": {
-      "runtime": "edge"
-    }
-  },
-  "routes": [
+  "rewrites": [
     {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/api/ssr?pathname=/$1"
+      "source": "/((?!assets/|logo.svg|favicon.ico).*)",
+      "destination": "/api/$1"
     }
   ]
 }

@@ -18,18 +18,8 @@ export const config = {
 
 const server = serverEntry as ServerEntry;
 
-function createOriginalRequest(request: Request): Request {
-  const rewrittenUrl = new URL(request.url);
-  const originalPathname = rewrittenUrl.searchParams.get("pathname") ?? "/";
-
-  rewrittenUrl.pathname = originalPathname;
-  rewrittenUrl.searchParams.delete("pathname");
-
-  return new Request(rewrittenUrl, request);
-}
-
 export default async function handler(request: Request, context: EdgeContext): Promise<Response> {
-  return server.fetch(createOriginalRequest(request), process.env, {
+  return server.fetch(request, process.env, {
     waitUntil: context.waitUntil?.bind(context),
   });
 }
