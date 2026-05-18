@@ -1,3 +1,6 @@
+// The SSR bundle is generated during `npm run build`, so TypeScript cannot
+// resolve declarations for it ahead of time in Vercel's function build step.
+// @ts-expect-error Generated at build time
 import serverEntry from "../dist/server/server.js";
 
 type ServerEntry = {
