@@ -1,5 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
+import { createRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Upload,
@@ -44,8 +43,11 @@ import {
   type TranslatedPrescription,
 } from "@/lib/translate.functions";
 import { AppLogo } from "@/components/app-logo";
+import { Route as rootRoute } from "./__root";
 
-export const Route = createFileRoute("/")({
+export const Route = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/",
   component: Index,
   head: () => ({
     meta: [
@@ -105,8 +107,8 @@ async function compressImage(file: File, maxDim = 1600, quality = 0.82): Promise
 }
 
 function Index() {
-  const analyze = useServerFn(analyzePrescription);
-  const translate = useServerFn(translatePrescription);
+  const analyze = analyzePrescription;
+  const translate = translatePrescription;
 
   const [preview, setPreview] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string>("");
