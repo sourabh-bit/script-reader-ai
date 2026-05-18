@@ -16,7 +16,7 @@ This repository also includes a `research/` area to document the team's proposed
 
 - Frontend: React, TypeScript, Vite, Tailwind CSS, TanStack Start
 - AI integration: Gemini 2.5 Flash API
-- Deployment target: Cloudflare-compatible build output
+- Deployment target: Vercel with TanStack Start SSR and Vercel Functions
 
 ## Proposed research pipeline
 
@@ -40,3 +40,12 @@ npm run dev
 ```
 
 Set `GEMINI_API_KEY` in `.env.local` before using analysis features.
+
+## Deployment
+
+This project is configured for Vercel.
+
+- Build command: `npm run build`
+- Output directory: `dist/client`
+- SSR entry: [api/server.ts](/d:/medical%20analyzer/script-reader-ai/api/server.ts:1)
+- Routing config: [vercel.json](/d:/medical%20analyzer/script-reader-ai/vercel.json:1)

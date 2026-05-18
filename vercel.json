@@ -1,10 +1,19 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "npm run build",
   "outputDirectory": "dist/client",
-  "rewrites": [
+  "functions": {
+    "api/server.ts": {
+      "runtime": "nodejs22.x"
+    }
+  },
+  "routes": [
     {
-      "source": "/((?!assets/|logo.svg|favicon.ico).*)",
-      "destination": "/api/$1"
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/api/server"
     }
   ]
 }
