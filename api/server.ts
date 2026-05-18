@@ -1,6 +1,5 @@
 import { Readable } from "node:stream";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import serverEntry from "../dist/server/server.js";
 
 type ServerEntry = {
   fetch: (
@@ -10,7 +9,18 @@ type ServerEntry = {
   ) => Promise<Response> | Response;
 };
 
-const server = serverEntry as ServerEntry;
+let serverPromise: Promise<ServerEntry> | undefined;
+
+async function getServer(): Promise<ServerEntry> {
+  if (!serverPromise) {
+    const serverBundleUrl = new URL("../dist/server/server.js", import.meta.url).href;
+    serverPromise = import(serverBundleUrl).then(
+      (mod) => ((mod as { default?: ServerEntry }).default ?? (mod as unknown as ServerEntry)),
+    );
+  }
+
+  return serverPromise;
+}
 
 async function readRequestBody(req: IncomingMessage): Promise<Uint8Array | undefined> {
   if (req.method === "GET" || req.method === "HEAD") return undefined;
@@ -77,6 +87,7 @@ async function sendWebResponse(webResponse: Response, res: ServerResponse): Prom
 export default async function handler(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const body = await readRequestBody(req);
   const request = toWebRequest(req, body);
+  const server = await getServer();
   const response = await server.fetch(request, process.env, {});
   await sendWebResponse(response, res);
 }
